@@ -18,7 +18,16 @@ class DataStream(ABC):
 
 class SensorStream(DataStream):
     def process_batch(self, data_batch: List[Any]) -> str:
-        return f"Processing sensor batch: {data_batch}"
+        result = ""
+        count = 0
+        for i in data_batch:
+            tmp = f"{i}"
+            if count < len(data_batch) - 1:
+                result = result + tmp + ", "
+            else:
+                result = result + tmp
+            count+=1
+        return f"Processing sensor batch: [{result}]"
 
 class TransactionStream(DataStream):
     def process_batch(self, data_batch: List[Any]) -> str:
@@ -34,5 +43,6 @@ if __name__ == "__main__":
     print()
     e = SensorStream(" SENSOR_001")
     x = e.process_batch(["temp:22.5", "humidity:65", "pressure:1013"])
+    # x = e.process_batch([1,2,3])
     print(x)
     
