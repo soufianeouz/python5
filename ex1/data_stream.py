@@ -3,7 +3,7 @@ from typing import Any, List, Optional, Dict, Union
 
 
 class DataStream(ABC):
-    def __init__(self, stream_id: str):
+    def __init__(self, stream_id: str) ->None:
         self.stream_id = stream_id
         self.total_processed = 0
         self.message = ""
@@ -14,13 +14,13 @@ class DataStream(ABC):
         pass
 
     def filter_data(self, data_batch: List[Any], criteria: Optional[str]= None) -> List[Any]:
-        pass
+        return data_batch
     
     def get_stats(self) -> Dict[str, Union[str, int, float]]:
-        pass
+        return {"processed": self.total_processed}
 
 class SensorStream(DataStream):
-    def __init__(self, stream_id):
+    def __init__(self, stream_id: str) -> None:
         super().__init__(stream_id)
         
         self.show_info = f"Stream ID: {self.stream_id}, Type: Environmental Data"
@@ -61,10 +61,19 @@ class SensorStream(DataStream):
         self.message = f"Processing sensor batch: [{result}]"
         return f"Sensor analysis: {total_items} readings processed, avg temp: {avg_temp}°C"
 
-    def get_stats(self):
+    def filter_data(self, data_batch: List[Any], criteria: Optional[str] = None) -> List[Any]:
+        if criteria == "High-priority":
+            return [
+                item
+                for item in data_batch
+                if isinstance(item, str) and item[:5] == "temp:" and float(item[5:]) > 20.0
+            ]
+        return []
+    
+    def get_stats(self) -> Dict[str, Union[str, int, float]]:
         return {"readings processed": self.total_processed}
 class TransactionStream(DataStream):
-    def __init__(self, stream_id):
+    def __init__(self, stream_id: str) -> None:
         super().__init__(stream_id)
         
         self.show_info = f"Stream ID: {self.stream_id}, Type: Financial Data"
@@ -105,10 +114,22 @@ class TransactionStream(DataStream):
         self.message = f"Processing transaction batch: [{result}]"
         return f"Transaction analysis: {len(data_batch)} operations, net flow: {net:+} units"
 
-    def get_stats(self):
+    
+    def filter_data(self, data_batch: List[Any], criteria: Optional[str] = None) -> List[Any]:
+        if criteria == "High-priority":
+            filtered = []
+            for item in data_batch:
+                if isinstance(item, str):
+                    if item[:4] == "buy:" and int(item[4:]) >= 100:
+                        filtered+=[item]
+                    elif item[:5] == "sell:" and int(item[5:]) >= 100:
+                        filtered+=[item]
+            return filtered
+        return data_batch
+    def get_stats(self) -> Dict[str, Union[str, int, float]]:
         return {"operations processed": self.total_processed}
 class EventStream(DataStream):
-    def __init__(self, stream_id):
+    def __init__(self, stream_id: str) -> None:
         super().__init__(stream_id)
         
         self.show_info = f"Stream ID: {self.stream_id}, Type: System Events"
@@ -133,10 +154,52 @@ class EventStream(DataStream):
             count+=1
         self.message = f"Processing event batch: [{result}]"
         return f"Event analysis: {len(data_batch)} events, {count_err} error detected"
-    def get_stats(self):
+    
+    
+    def filter_data(self, data_batch: List[Any], criteria: Optional[str] = None) -> List[Any]:
+        if criteria == "High-priority":
+            return [item for item in data_batch if item == "error"]
+        return data_batch
+    
+    def get_stats(self) -> Dict[str, Union[str, int, float]]:
         return {"events processed": self.total_processed}
 
 
+
+class StreamProcessor:
+    def __init__(self) -> None:
+        self.streams: List[DataStream] = []
+
+    def add_stream(self, stream: DataStream) -> None:
+        self.streams+=[stream]
+
+    def process_all(self, batches: List[List[Any]], criteria: str = "High-priority") -> None:
+        print("=== Polymorphic Stream Processing ===")
+        print("Processing mixed stream types through unified interface...\n")
+        print("Batch 1 Results:")
+        i = 0
+        for stream in self.streams:
+            stream.process_batch(batches[i])
+            stats = stream.get_stats()            
+            if isinstance(stream, SensorStream):
+                print(f"- Sensor data: {stats['readings processed']} readings processed")
+            elif isinstance(stream, TransactionStream):
+                print(f"- Transaction data: {stats['operations processed']} operations processed")
+            elif isinstance(stream, EventStream):
+                print(f"- Event data: {stats['events processed']} events processed")
+            i+=1
+        
+        print()
+        print(f"Stream filtering active: {criteria} data only")
+        string = "Filtered results: "
+        i = 0
+        for item in self.streams:
+            if isinstance(item, SensorStream):
+                string+=f"{len(item.filter_data(batches[i], criteria))} critical sensor alerts, "
+            if isinstance(item, TransactionStream):
+                string+=f"{len(item.filter_data(batches[i], criteria))} large transaction"
+            i+=1
+        print(string)
 if __name__ == "__main__":
     print("=== CODE NEXUS - POLYMORPHIC STREAM SYSTEM ===")
     print()
@@ -169,30 +232,17 @@ if __name__ == "__main__":
     poly_finance = TransactionStream("TRANS_POLY")
     poly_event = EventStream("EVENT_POLY")
     
-    print("=== Polymorphic Stream Processing ===")
-    print("Processing mixed stream types through unified interface...")
-    print()
-    print("Batch 1 Results:")
-    
-    poly_sensor_data = ['temp:18.0', 'temp:21.5']
-    poly_finance_data = ['buy:10', 'sell:5', 'buy:20', 'sell:2']
+    poly_sensor_data = ['temp:30.0', 'temp:26.5']
+    poly_finance_data = ['buy:10', 'sell:5', 'buy:120', 'sell:2']
     poly_event_data = ['error', 'login', 'error']
 
-    dats = [poly_sensor_data, poly_finance_data, poly_event_data]
-    all_streams = [poly_sensor, poly_finance, poly_event]
+    batches = [poly_sensor_data, poly_finance_data, poly_event_data]
     
-    i = 0
-    for stream in all_streams:
-        stream.process_batch(dats[i])
-        stats = stream.get_stats()
-        
-        if isinstance(stream, SensorStream):
-            print(f"- Sensor data: {stats['readings processed']} readings processed")
-            
-        elif isinstance(stream, TransactionStream):
-            print(f"- Transaction data: {stats['operations processed']} operations processed")
-            
-        elif isinstance(stream, EventStream):
-            print(f"- Event data: {stats['events processed']} events processed")
-            
-        i += 1
+    processor = StreamProcessor()
+    processor.add_stream(poly_sensor)
+    processor.add_stream(poly_finance)
+    processor.add_stream(poly_event)
+    
+    processor.process_all(batches, criteria="High-priority")
+    print()
+    print("All streams processed successfully. Nexus throughput optimal.")
