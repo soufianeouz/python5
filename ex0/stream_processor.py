@@ -18,8 +18,9 @@ class DataProcessor(ABC):
 class NumericProcessor(DataProcessor):
     def validate(self, data: Any) -> bool:
         # Prove it is a list (Adding a list to a non-list causes an error)
-        data + []
+        # data + []
         try:
+            data + []
             for i in data:
                 i + 0
             return True
