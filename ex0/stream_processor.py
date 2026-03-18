@@ -1,33 +1,35 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-class DataProcessor(ABC):    
+
+class DataProcessor(ABC):
     @abstractmethod
     def process(self, data: Any) -> str:
         pass
-        
+
     @abstractmethod
     def validate(self, data: Any) -> bool:
         pass
-        
+
     def format_output(self, result: str) -> str:
         return f"{result}"
 
 
 class NumericProcessor(DataProcessor):
     def validate(self, data: Any) -> bool:
-        data + [] #Prove it is a list (Adding a list to a non-list causes an error)
+        # Prove it is a list (Adding a list to a non-list causes an error)
+        data + []
         try:
             for i in data:
                 i + 0
             return True
-        except:
+        except Exception:
             return False
 
     def process(self, data: Any) -> str:
         if not self.validate(data):
             raise ValueError("Invalid data type for NumericProcessor.")
-        
+
         try:
             count = len(data)
             total = sum(data)
@@ -45,13 +47,13 @@ class TextProcessor(DataProcessor):
         try:
             data + ""
             return True
-        except:
+        except Exception:
             return False
 
     def process(self, data: Any) -> str:
         if not self.validate(data):
             raise ValueError("Invalid data type for TextProcessor.")
-            
+
         try:
             chars = len(data)
             words = len(data.split())
@@ -66,9 +68,9 @@ class LogProcessor(DataProcessor):
             data["message"]
             data["level"]
             return True
-        except:
+        except Exception:
             return False
-        
+
     def process(self, data: Any) -> str:
         if not self.validate(data):
             raise ValueError("Invalid data type for LogProcessor.")
@@ -83,7 +85,7 @@ class LogProcessor(DataProcessor):
 
     def format_output(self, result: str) -> str:
         base_result = super().format_output(result)
-        
+
         if "ERROR" in base_result:
             return f"[ALERT] {base_result}"
         elif "INFO" in base_result:
@@ -101,9 +103,7 @@ if __name__ == "__main__":
     tmp = num_proc.process(num_data)
     print("Validation: Numeric data verified")
     print(f"Output: {num_proc.format_output(tmp)}")
-    
-    
-    
+
     print()
     print("Initializing Text Processor...")
     text_proc = TextProcessor()
@@ -112,7 +112,6 @@ if __name__ == "__main__":
     tmp = text_proc.process(text_data)
     print("Validation: Text data verified")
     print(f"Output: {text_proc.format_output(tmp)}")
-    
 
     print()
     print("Initializing Log Processor...")
@@ -122,10 +121,10 @@ if __name__ == "__main__":
     print(f'Processing data: "{dic["level"]}: {dic["message"]}"')
     print("Validation: Log entry verified")
     print(f"Output: {tmp}")
-    
+
     print()
     print("=== Polymorphic Processing Demo ===")
- 
+
     num_data = [1, 2, 3]
     text_data = "Hello world."
     dic = {"message": " System ready", "level": "INFO"}
@@ -134,6 +133,6 @@ if __name__ == "__main__":
     i = 0
     for item in processors:
         print(f" Result {i + 1}: {item.process(data[i])}")
-        i+=1
+        i += 1
     print()
     print("Foundation systems online. Nexus ready for advanced streams.")
